@@ -16,6 +16,8 @@
 
 ## 安装与使用
 
+> [前往 Releases 下载最新安装包](https://github.com/Yzhaoqi/ChatGPT-Decoration-Project/releases/latest)
+
 ### 准备条件
 
 - macOS 12 或更高版本。
@@ -24,10 +26,12 @@
 
 ### 1. 安装装饰版
 
-1. 从 [`outputs/`](outputs/) 下载并解压最新的 ZIP 发布包。
-2. 按 `Cmd+Q` 完全退出正在运行的官方 ChatGPT/Codex，而不是只关闭窗口。
-3. 打开解压目录中的 `ChatGPT 装饰版.app`。如果 macOS 阻止首次打开，请在 Finder 中右键 App，选择“打开”，再确认一次。
-4. 首次成功启动后，程序会在 `~/Applications/ChatGPT 装饰版.app` 安装稳定副本。建议将这个副本放入 Dock，今后从这里启动。
+1. 打开项目的 [Releases 页面](https://github.com/Yzhaoqi/ChatGPT-Decoration-Project/releases/latest)。
+2. 在最新版本的 **Assets** 中下载 `ChatGPT-Decorations-App-v*.zip`。不要下载 GitHub 自动生成的 “Source code” 压缩包，它只包含源码，不含可直接运行的 App。
+3. 在 Finder 中双击 ZIP 解压。
+4. 按 `Cmd+Q` 完全退出正在运行的官方 ChatGPT/Codex，而不是只关闭窗口。
+5. 打开解压目录中的 `ChatGPT 装饰版.app`。如果 macOS 阻止首次打开，请在 Finder 中右键 App，选择“打开”，再确认一次。
+6. 首次成功启动后，程序会在 `~/Applications/ChatGPT 装饰版.app` 安装稳定副本。建议将这个副本放入 Dock，今后从这里启动。
 
 首次启动还会创建以下用户配置目录，后续更新装饰版不会覆盖其中的配置和图片：
 
@@ -83,7 +87,7 @@
 
 - `work/snow-miku-runtime-patch/`：页面注入器、内嵌设置界面、配置桥、Schema、默认素材及启动/检查/恢复/卸载脚本。
 - `work/chatgpt-decorations-app/`：macOS App 启动器、配置编辑器、恢复工具、自动接管器、LaunchAgent、Info.plist、图标和发布脚本。
-- `outputs/`：完成签名、自检和解压复验的最新发布成品。
+- `outputs/`：本地构建生成的签名、自检和解压复验成品；该目录不提交到 Git，ZIP 成品通过 GitHub Releases 发布。
 
 ## 重新构建
 
@@ -94,7 +98,7 @@ cd work/chatgpt-decorations-app
 ./build-release.command
 ```
 
-完成后会在工程根目录的 `outputs/` 下生成并仅保留最新的 App 发布包。
+完成后会在工程根目录的 `outputs/` 下生成并仅保留最新的 App 发布包。`outputs/` 已被 Git 忽略；发布时只需把其中的版本化 ZIP 上传为 GitHub Release Asset。
 
 ## 用户配置
 
