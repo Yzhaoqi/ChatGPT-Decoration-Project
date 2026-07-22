@@ -1,0 +1,97 @@
+#!/bin/zsh
+set -u
+
+STABLE_APP="${1:-$HOME/Applications/ChatGPT 装饰版.app}"
+SUPPORT="$HOME/Library/Application Support/ChatGPTDecorations"
+DISABLED_MARKER="$SUPPORT/auto-relaunch.disabled"
+LOG_DIR="$HOME/Library/Logs/ChatGPTDecorationsLauncher"
+LOG_FILE="$LOG_DIR/auto-relaunch.log"
+source "$STABLE_APP/Contents/Resources/theme/app-discovery.zsh"
+
+mkdir -p "$SUPPORT" "$LOG_DIR"
+
+log_message() {
+  print -r -- "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
+}
+
+log_message "更新重启接管器已启动，装饰版路径：$STABLE_APP"
+
+while true; do
+  if [[ -f "$DISABLED_MARKER" || ! -x "$STABLE_APP/Contents/MacOS/ChatGPTDecorationsLauncher" ]]; then
+    sleep 2
+    continue
+  fi
+
+  plain_pid=""
+  decorated_port=""
+  pids="$(openai_main_process_pids)"
+  for pid in ${(f)pids}; do
+    [[ "$pid" == <-> ]] || continue
+    command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+    [[ "$command_line" == *"/Contents/MacOS/ChatGPT"* ]] || continue
+    if [[ "$command_line" != *"--remote-debugging-port="* ]]; then
+      plain_pid="$pid"
+      break
+    elif [[ -z "$decorated_port" ]]; then
+      decorated_port="${${command_line#*--remote-debugging-port=}%% *}"
+    fi
+  done
+
+  if [[ -z "$plain_pid" ]]; then
+    if [[ "$decorated_port" == <-> ]]; then
+      if ! /bin/ps -axo command= | /usr/bin/awk -v port="$decorated_port" '
+        index($0, "injector.cjs") > 0 && index($0, "--port " port) > 0 { found = 1; exit }
+        END { exit(found ? 0 : 1) }
+      '; then
+        theme="$STABLE_APP/Contents/Resources/theme"
+        node="/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+        [[ -x "$node" ]] || node="$(command -v node 2>/dev/null || true)"
+        if [[ -n "$node" && -f "$theme/injector.cjs" && -f "$SUPPORT/decorations.json" ]]; then
+          runtime_log_dir="$HOME/Library/Logs/SnowMikuCodexRuntime"
+          state_dir="$HOME/Library/Application Support/SnowMikuEmbeddedConversation"
+          mkdir -p "$runtime_log_dir" "$state_dir"
+          nohup "$node" "$theme/injector.cjs" --config "$SUPPORT/decorations.json" --port "$decorated_port" \
+            >> "$runtime_log_dir/injector-$decorated_port.log" 2>&1 &!
+          print -r -- "$!" > "$state_dir/injector.pid"
+          log_message "检测到注入器退出，已在端口 $decorated_port 原地恢复。"
+        fi
+      fi
+    fi
+    sleep 2
+    continue
+  fi
+
+  # 给 Sparkle 更新后的首次启动留出初始化时间，再确认它仍是普通模式。
+  sleep 2
+  command_line="$(ps -p "$plain_pid" -o command= 2>/dev/null || true)"
+  if [[ -z "$command_line" || "$command_line" == *"--remote-debugging-port="* || -f "$DISABLED_MARKER" ]]; then
+    continue
+  fi
+
+  log_message "检测到原版直接重启（PID $plain_pid），切换到装饰版。"
+  osascript -e 'tell application id "com.openai.codex" to quit' >/dev/null 2>&1 || true
+  for _ in {1..60}; do
+    openai_main_process_running || break
+    sleep 0.25
+  done
+
+  if openai_main_process_running; then
+    openai_main_process_pids | while read -r pid; do
+      [[ "$pid" == <-> ]] || continue
+      command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+      [[ "$command_line" == *"/Contents/MacOS/ChatGPT"* ]] && kill -TERM "$pid" >/dev/null 2>&1 || true
+    done
+    for _ in {1..20}; do
+      openai_main_process_running || break
+      sleep 0.25
+    done
+  fi
+
+  if ! openai_main_process_running; then
+    /usr/bin/open "$STABLE_APP"
+    log_message "已从固定路径启动装饰版。"
+  else
+    log_message "原版进程未能正常结束，本轮未强制切换。"
+  fi
+  sleep 5
+done

@@ -1,0 +1,30 @@
+{
+  "$schema": "./decorations.schema.json",
+  "version": 1,
+  "decorations": [
+    {
+      "id": "snow-miku",
+      "enabled": true,
+      "asset": "assets/snow-miku.png",
+      "anchor": "composer-top-right",
+      "width": {
+        "min": 110,
+        "viewportRatio": 0.075,
+        "max": 132,
+        "compactMin": 102,
+        "compactMax": 118
+      },
+      "imageAnchorY": 0.65,
+      "insetX": 16,
+      "insetY": 0,
+      "offsetX": 0,
+      "offsetY": 0,
+      "normalOpacity": 0.9,
+      "overlapOpacity": 0.2,
+      "detectTextOverlap": true,
+      "reserveInputText": true,
+      "safePadding": 12,
+      "zIndex": 40
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "build:002b03c33097798912115d007404da58d891b6558f95c46fe1b1597f4ab1e394",
+  "title": "ChatGPT 页面装饰配置",
+  "type": "object",
+  "required": ["version", "decorations"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "decorations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/decoration" }
+    }
+  },
+  "$defs": {
+    "decoration": {
+      "type": "object",
+      "required": ["id", "asset"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+        "enabled": { "type": "boolean", "default": true },
+        "asset": { "type": "string", "description": "相对于补丁目录的图片路径" },
+        "anchor": {
+          "enum": ["composer-top-right", "composer-top-left", "viewport-bottom-right", "viewport-bottom-left"],
+          "default": "composer-top-right"
+        },
+        "width": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 16 },
+            "viewportRatio": { "type": "number", "minimum": 0.01, "maximum": 1 },
+            "max": { "type": "number", "minimum": 16 },
+            "compactMin": { "type": "number", "minimum": 16 },
+            "compactMax": { "type": "number", "minimum": 16 }
+          }
+        },
+        "imageAnchorY": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+        "imageAspectRatio": { "type": "number", "minimum": 0.05, "maximum": 20, "description": "非 PNG 图片在首次加载前使用的高宽比；通常可省略" },
+        "insetX": { "type": "number", "default": 16 },
+        "insetY": { "type": "number", "default": 16 },
+        "offsetX": { "type": "number", "default": 0 },
+        "offsetY": { "type": "number", "default": 0 },
+        "normalOpacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.9 },
+        "overlapOpacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.2 },
+        "detectTextOverlap": { "type": "boolean", "default": true },
+        "reserveInputText": { "type": "boolean", "default": false },
+        "safePadding": { "type": "number", "minimum": 0, "default": 12 },
+        "zIndex": { "type": "integer", "minimum": 1, "maximum": 999, "default": 40 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

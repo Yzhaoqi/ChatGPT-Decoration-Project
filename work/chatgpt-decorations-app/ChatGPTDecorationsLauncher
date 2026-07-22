@@ -1,0 +1,94 @@
+#!/bin/zsh
+set -u
+
+CONTENTS="${0:A:h:h}"
+THEME="$CONTENTS/Resources/theme"
+SUPPORT="$HOME/Library/Application Support/ChatGPTDecorations"
+LOG_DIR="$HOME/Library/Logs/ChatGPTDecorationsLauncher"
+LOG_FILE="$LOG_DIR/launcher.log"
+APP_BUNDLE="${CONTENTS:h}"
+STABLE_DIR="$HOME/Applications"
+STABLE_APP="$STABLE_DIR/ChatGPT 装饰版.app"
+WATCHER_SOURCE="$CONTENTS/Resources/AutoRelaunchWatcher"
+AGENT_SOURCE="$CONTENTS/Resources/AutoRelaunchAgent.plist"
+WATCHER_DEST="$SUPPORT/AutoRelaunchWatcher"
+AGENT_DEST="$HOME/Library/LaunchAgents/local.codex.chatgpt-decorations.auto-relaunch.plist"
+AGENT_LABEL="local.codex.chatgpt-decorations.auto-relaunch"
+
+install_auto_relaunch() {
+  mkdir -p "$SUPPORT" "$STABLE_DIR" "$HOME/Library/LaunchAgents" "$LOG_DIR"
+  [[ -x "$WATCHER_SOURCE" ]] || { print -u2 "缺少更新重启接管器"; return 1; }
+  plutil -lint "$AGENT_SOURCE" >/dev/null || { print -u2 "接管器 LaunchAgent 配置无效"; return 1; }
+
+  if [[ "$APP_BUNDLE" != "$STABLE_APP" ]]; then
+    temporary_app="$STABLE_DIR/.ChatGPT 装饰版更新.$$"
+    rm -rf -- "$temporary_app"
+    ditto --rsrc "$APP_BUNDLE" "$temporary_app" || return 1
+    xattr -dr com.apple.quarantine "$temporary_app" >/dev/null 2>&1 || true
+    rm -rf -- "$STABLE_APP"
+    mv "$temporary_app" "$STABLE_APP" || return 1
+  fi
+
+  cp "$WATCHER_SOURCE" "$WATCHER_DEST" || return 1
+  chmod +x "$WATCHER_DEST" || return 1
+  cp "$AGENT_SOURCE" "$AGENT_DEST" || return 1
+  rm -f "$SUPPORT/auto-relaunch.disabled"
+
+  launchctl bootout "gui/$UID" "$AGENT_DEST" >/dev/null 2>&1 || true
+  launchctl bootstrap "gui/$UID" "$AGENT_DEST" || return 1
+  launchctl kickstart -k "gui/$UID/$AGENT_LABEL" >/dev/null 2>&1 || true
+  print "已启用官方更新后的装饰版自动接管。"
+}
+
+if [[ "${1:-}" == "--self-test" ]]; then
+  NODE="/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+  [[ -x "$NODE" ]] || NODE="$(command -v node || true)"
+  [[ -n "$NODE" ]] || { print -u2 "没有可用的 Node.js"; exit 1; }
+  /usr/bin/env -u DECORATIONS_CONFIG_PATH "$NODE" "$THEME/injector.cjs" --check-config
+  zsh -n "$THEME/launch.command"
+  zsh -n "$WATCHER_SOURCE"
+  plutil -lint "$AGENT_SOURCE" >/dev/null
+  "$THEME/launch.command" --preflight
+  print "App 自检通过。"
+  exit 0
+fi
+
+if [[ "${1:-}" == "--install-auto-relaunch" ]]; then
+  install_auto_relaunch
+  exit $?
+fi
+
+mkdir -p "$SUPPORT/assets" "$LOG_DIR"
+if [[ ! -f "$SUPPORT/decorations.json" ]]; then
+  cp "$THEME/decorations.json" "$SUPPORT/decorations.json"
+fi
+if [[ ! -f "$SUPPORT/decorations.schema.json" ]]; then
+  cp "$THEME/decorations.schema.json" "$SUPPORT/decorations.schema.json"
+fi
+if [[ ! -f "$SUPPORT/assets/snow-miku.png" ]]; then
+  cp "$THEME/assets/snow-miku.png" "$SUPPORT/assets/snow-miku.png"
+fi
+
+export DECORATIONS_CONFIG_PATH="$SUPPORT/decorations.json"
+"$THEME/launch.command" >"$LOG_FILE" 2>&1
+STATUS=$?
+
+if [[ "$STATUS" -eq 0 ]]; then
+  AUTO_STATUS=0
+  install_auto_relaunch >>"$LOG_FILE" 2>&1 || AUTO_STATUS=$?
+  if [[ "$AUTO_STATUS" -eq 0 ]]; then
+    osascript -e 'display notification "配置已载入，更新重启自动接管已启用" with title "ChatGPT 装饰版已启动"' >/dev/null 2>&1 || true
+  else
+    osascript -e 'display notification "装饰已启动，但更新重启自动接管安装失败" with title "ChatGPT 装饰版"' >/dev/null 2>&1 || true
+  fi
+  exit 0
+fi
+
+MESSAGE="$(tail -n 18 "$LOG_FILE" 2>/dev/null)"
+[[ -n "$MESSAGE" ]] || MESSAGE="启动失败，退出码：$STATUS"
+osascript \
+  -e 'on run argv' \
+  -e 'display dialog (item 1 of argv) with title "ChatGPT 装饰版未启动" buttons {"好"} default button "好" with icon caution' \
+  -e 'end run' \
+  -- "$MESSAGE" >/dev/null 2>&1 || true
+exit "$STATUS"

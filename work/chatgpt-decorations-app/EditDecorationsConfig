@@ -1,0 +1,14 @@
+#!/bin/zsh
+set -u
+
+CONTENTS="${0:A:h:h}"
+DEFAULTS="$CONTENTS/Resources/defaults"
+SUPPORT="$HOME/Library/Application Support/ChatGPTDecorations"
+
+mkdir -p "$SUPPORT/assets"
+[[ -f "$SUPPORT/decorations.json" ]] || cp "$DEFAULTS/decorations.json" "$SUPPORT/decorations.json"
+[[ -f "$SUPPORT/decorations.schema.json" ]] || cp "$DEFAULTS/decorations.schema.json" "$SUPPORT/decorations.schema.json"
+[[ -f "$SUPPORT/assets/snow-miku.png" ]] || cp "$DEFAULTS/assets/snow-miku.png" "$SUPPORT/assets/snow-miku.png"
+
+open "$SUPPORT"
+open -a TextEdit "$SUPPORT/decorations.json"

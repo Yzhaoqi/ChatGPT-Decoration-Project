@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+  <key>CFBundleDisplayName</key><string>恢复原版 ChatGPT</string>
+  <key>CFBundleExecutable</key><string>RestoreOriginal</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIdentifier</key><string>local.codex.chatgpt-decorations.restore</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>恢复原版 ChatGPT</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>3.2.4</string>
+  <key>CFBundleVersion</key><string>324</string>
+  <key>DCPBuildFingerprint</key><string>002b03c33097798912115d007404da58d891b6558f95c46fe1b1597f4ab1e394</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>

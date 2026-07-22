@@ -1,0 +1,15 @@
+# macOS metadata
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Generated release artifacts
+outputs/

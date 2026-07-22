@@ -1,0 +1,19 @@
+#!/bin/zsh
+set -u
+
+CONTENTS="${0:A:h:h}"
+SCRIPT="$CONTENTS/Resources/restore-original.command"
+LOG_DIR="$HOME/Library/Logs/ChatGPTDecorationsLauncher"
+LOG_FILE="$LOG_DIR/restore.log"
+mkdir -p "$LOG_DIR"
+
+"$SCRIPT" >"$LOG_FILE" 2>&1
+STATUS=$?
+MESSAGE="$(tail -n 18 "$LOG_FILE" 2>/dev/null)"
+[[ -n "$MESSAGE" ]] || MESSAGE="操作结束，退出码：$STATUS"
+osascript \
+  -e 'on run argv' \
+  -e 'display dialog (item 1 of argv) with title "恢复原版 ChatGPT" buttons {"好"} default button "好"' \
+  -e 'end run' \
+  -- "$MESSAGE" >/dev/null 2>&1 || true
+exit "$STATUS"
