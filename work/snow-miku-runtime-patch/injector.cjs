@@ -247,7 +247,7 @@ if (!acquireRuntimeLock(port)) process.exit(0);
 function buildInstallSource(currentDecorations) {
   return `(() => {
   "use strict";
-  const VERSION = "3.2.4";
+  const VERSION = "3.2.5";
   const PROVENANCE = Object.freeze(${JSON.stringify(PROJECT_PROVENANCE)});
   const BUILD_FINGERPRINT = ${JSON.stringify(BUILD_CHANNEL_ID)};
   const STYLE_ID = "snow-miku-runtime-style-v3";
@@ -521,7 +521,10 @@ function buildInstallSource(currentDecorations) {
   }
 
   function findSettingsBottomRow(reference) {
-    const bottomLabels = new Set(["已归档任务", "Archived tasks"]);
+    const bottomLabels = new Set([
+      "已归档任务", "Archived tasks",
+      "已归档的聊天", "已归档聊天", "Archived chats"
+    ]);
     const sidebar = findSettingsSidebar(reference);
     const walker = document.createTreeWalker(sidebar || document.body, NodeFilter.SHOW_TEXT);
     let node;
@@ -535,7 +538,20 @@ function buildInstallSource(currentDecorations) {
         if (rect.width > 150 && rect.width < 440 && rect.height >= 26 && rect.height < 64) return element;
       }
     }
-    return null;
+
+    // 设置项名称可能随客户端版本或语言变化。找不到已知的归档入口时，
+    // 使用侧栏中位置最低的可见菜单行，避免退回“宠物”等中间位置。
+    let bottomRow = null;
+    let bottomEdge = -Infinity;
+    for (const candidate of (sidebar || document.body).querySelectorAll("button, a, [role=button]")) {
+      if (candidate.id === SETTINGS_ENTRY_ID || candidate.closest("#" + SETTINGS_PANEL_ID)) continue;
+      const rect = candidate.getBoundingClientRect();
+      if (rect.left >= 440 || rect.width <= 120 || rect.width >= 440 || rect.height < 24 || rect.height >= 70) continue;
+      if (rect.bottom <= bottomEdge) continue;
+      bottomRow = candidate;
+      bottomEdge = rect.bottom;
+    }
+    return bottomRow;
   }
 
   function restoreRuntimeConfig(config, snapshot) {
@@ -1461,6 +1477,6 @@ async function discover() {
   }
 }
 
-console.log(`[Decorations] 配置驱动注入器 3.2.4 已启动，共 ${decorations.filter((decoration) => decoration.enabled).length} 个启用装饰，端口 ${port}。`);
+console.log(`[Decorations] 配置驱动注入器 3.2.5 已启动，共 ${decorations.filter((decoration) => decoration.enabled).length} 个启用装饰，端口 ${port}。`);
 discover();
 setInterval(discover, 1200);
