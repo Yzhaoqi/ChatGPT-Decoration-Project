@@ -16,6 +16,19 @@ log_message() {
 
 log_message "更新重启接管器已启动，装饰版路径：$STABLE_APP"
 
+update_install_running() {
+  /bin/ps -axo command= | /usr/bin/awk '
+    /\/Sparkle\.framework\// || /\/Updater\.app\/Contents\/MacOS\/Updater/ {
+      if ($0 !~ /\/usr\/bin\/awk/) { found = 1; exit }
+    }
+    END { exit(found ? 0 : 1) }
+  '
+}
+
+observed_plain_pid=""
+plain_since=0
+retry_after=0
+
 while true; do
   if [[ -f "$DISABLED_MARKER" || ! -x "$STABLE_APP/Contents/MacOS/ChatGPTDecorationsLauncher" ]]; then
     sleep 2
@@ -30,14 +43,15 @@ while true; do
     command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
     [[ "$command_line" == *"/Contents/MacOS/ChatGPT"* ]] || continue
     if [[ "$command_line" != *"--remote-debugging-port="* ]]; then
-      plain_pid="$pid"
-      break
+      [[ -z "$plain_pid" ]] && plain_pid="$pid"
     elif [[ -z "$decorated_port" ]]; then
       decorated_port="${${command_line#*--remote-debugging-port=}%% *}"
     fi
   done
 
   if [[ -z "$plain_pid" ]]; then
+    observed_plain_pid=""
+    retry_after=0
     if [[ "$decorated_port" == <-> ]]; then
       if ! /bin/ps -axo command= | /usr/bin/awk -v port="$decorated_port" '
         index($0, "injector.cjs") > 0 && index($0, "--port " port) > 0 { found = 1; exit }
@@ -61,37 +75,39 @@ while true; do
     continue
   fi
 
-  # 给 Sparkle 更新后的首次启动留出初始化时间，再确认它仍是普通模式。
+  now="$(date +%s)"
+  if [[ "$plain_pid" != "$observed_plain_pid" ]]; then
+    observed_plain_pid="$plain_pid"
+    plain_since="$now"
+    retry_after=0
+    log_message "检测到普通模式进程（PID $plain_pid），等待更新和首次启动完成。"
+  fi
+  if (( now - plain_since < 45 || now < retry_after )) || update_install_running || [[ "$decorated_port" == <-> ]]; then
+    sleep 2
+    continue
+  fi
+
+  # 再次确认同一进程仍在普通模式，避免关闭刚完成的装饰版启动。
   sleep 2
   command_line="$(ps -p "$plain_pid" -o command= 2>/dev/null || true)"
-  if [[ -z "$command_line" || "$command_line" == *"--remote-debugging-port="* || -f "$DISABLED_MARKER" ]]; then
+  if [[ -z "$command_line" || "$command_line" == *"--remote-debugging-port="* || -f "$DISABLED_MARKER" ]] \
+    || [[ "$(openai_main_process_pids)" != "$plain_pid" ]] || update_install_running; then
     continue
   fi
 
   log_message "检测到原版直接重启（PID $plain_pid），切换到装饰版。"
-  osascript -e 'tell application id "com.openai.codex" to quit' >/dev/null 2>&1 || true
-  for _ in {1..60}; do
+  osascript -e 'with timeout of 5 seconds' -e 'tell application id "com.openai.codex" to quit' -e 'end timeout' >/dev/null 2>&1 || true
+  for _ in {1..120}; do
     openai_main_process_running || break
     sleep 0.25
   done
 
-  if openai_main_process_running; then
-    openai_main_process_pids | while read -r pid; do
-      [[ "$pid" == <-> ]] || continue
-      command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
-      [[ "$command_line" == *"/Contents/MacOS/ChatGPT"* ]] && kill -TERM "$pid" >/dev/null 2>&1 || true
-    done
-    for _ in {1..20}; do
-      openai_main_process_running || break
-      sleep 0.25
-    done
-  fi
-
-  if ! openai_main_process_running; then
+  if [[ ! -f "$DISABLED_MARKER" ]] && ! openai_main_process_running && ! update_install_running; then
     /usr/bin/open "$STABLE_APP"
     log_message "已从固定路径启动装饰版。"
   else
-    log_message "原版进程未能正常结束，本轮未强制切换。"
+    retry_after="$(($(date +%s) + 30))"
+    log_message "原版进程或更新程序仍在运行，本轮等待自然退出。"
   fi
   sleep 5
 done

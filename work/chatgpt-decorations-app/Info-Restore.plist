@@ -10,8 +10,8 @@
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>恢复原版 ChatGPT</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>3.2.5</string>
-  <key>CFBundleVersion</key><string>325</string>
+  <key>CFBundleShortVersionString</key><string>3.2.6</string>
+  <key>CFBundleVersion</key><string>326</string>
   <key>DCPBuildFingerprint</key><string>002b03c33097798912115d007404da58d891b6558f95c46fe1b1597f4ab1e394</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSUIElement</key><true/>

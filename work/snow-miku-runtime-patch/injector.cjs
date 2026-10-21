@@ -247,7 +247,7 @@ if (!acquireRuntimeLock(port)) process.exit(0);
 function buildInstallSource(currentDecorations) {
   return `(() => {
   "use strict";
-  const VERSION = "3.2.5";
+  const VERSION = "3.2.6";
   const PROVENANCE = Object.freeze(${JSON.stringify(PROJECT_PROVENANCE)});
   const BUILD_FINGERPRINT = ${JSON.stringify(BUILD_CHANNEL_ID)};
   const STYLE_ID = "snow-miku-runtime-style-v3";
@@ -521,26 +521,9 @@ function buildInstallSource(currentDecorations) {
   }
 
   function findSettingsBottomRow(reference) {
-    const bottomLabels = new Set([
-      "已归档任务", "Archived tasks",
-      "已归档的聊天", "已归档聊天", "Archived chats"
-    ]);
     const sidebar = findSettingsSidebar(reference);
-    const walker = document.createTreeWalker(sidebar || document.body, NodeFilter.SHOW_TEXT);
-    let node;
-    while ((node = walker.nextNode())) {
-      if (!bottomLabels.has(String(node.nodeValue || "").trim())) continue;
-      let element = node.parentElement;
-      const interactive = element?.closest("button, a, [role=button]");
-      if (interactive) return interactive;
-      for (let depth = 0; element && depth < 5; depth += 1, element = element.parentElement) {
-        const rect = element.getBoundingClientRect();
-        if (rect.width > 150 && rect.width < 440 && rect.height >= 26 && rect.height < 64) return element;
-      }
-    }
-
-    // 设置项名称可能随客户端版本或语言变化。找不到已知的归档入口时，
-    // 使用侧栏中位置最低的可见菜单行，避免退回“宠物”等中间位置。
+    // 设置项会随版本和语言增减；“已归档的聊天”也不一定是最后一项。
+    // 始终按侧栏菜单行的实际位置插到最下方。
     let bottomRow = null;
     let bottomEdge = -Infinity;
     for (const candidate of (sidebar || document.body).querySelectorAll("button, a, [role=button]")) {
@@ -757,10 +740,19 @@ function buildInstallSource(currentDecorations) {
 
   function ensureSettingsUI() {
     const existing = document.getElementById(SETTINGS_ENTRY_ID);
-    if (existing?.isConnected) return existing;
     const reference = findSettingsReferenceRow();
-    if (!reference?.parentElement) return null;
+    if (!reference?.parentElement) {
+      existing?.remove();
+      return null;
+    }
     const insertionReference = findSettingsBottomRow(reference) || reference;
+    if (existing?.isConnected) {
+      existing.__snowMikuReference = insertionReference;
+      if (existing.previousElementSibling !== insertionReference) {
+        insertionReference.insertAdjacentElement("afterend", existing);
+      }
+      return existing;
+    }
     const entry = createElement("button");
     entry.id = SETTINGS_ENTRY_ID;
     entry.type = "button";
@@ -1477,6 +1469,6 @@ async function discover() {
   }
 }
 
-console.log(`[Decorations] 配置驱动注入器 3.2.5 已启动，共 ${decorations.filter((decoration) => decoration.enabled).length} 个启用装饰，端口 ${port}。`);
+console.log(`[Decorations] 配置驱动注入器 3.2.6 已启动，共 ${decorations.filter((decoration) => decoration.enabled).length} 个启用装饰，端口 ${port}。`);
 discover();
 setInterval(discover, 1200);
